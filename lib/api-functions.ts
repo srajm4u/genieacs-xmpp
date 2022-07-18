@@ -203,8 +203,8 @@ export async function connectionRequest(
     deviceId
   );
 
-  if (await udpProm) return "";
-
+    if (await udpProm) return "";
+  }
   return status;
 }
 

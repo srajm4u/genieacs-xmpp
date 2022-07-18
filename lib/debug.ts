@@ -231,7 +231,7 @@ export function outgoingXmppStanza(deviceId: string, body: string): void {
   };
 
   if (DEBUG_FORMAT === "yaml")
-    appendFileSync(DEBUG_FILE, "---\n" + yaml.stringify(msg));
+    appendFileSync(DEBUG_FILE, "---\n" + stringify(msg));
   else if (DEBUG_FORMAT === "json")
     appendFileSync(DEBUG_FILE, JSON.stringify(msg) + "\n");
   else throw new Error(`Unrecognized DEBUG_FORMAT option`);
@@ -248,7 +248,7 @@ export function incomingXmppStanza(deviceId: string, body: string): void {
   };
 
   if (DEBUG_FORMAT === "yaml")
-    appendFileSync(DEBUG_FILE, "---\n" + yaml.stringify(msg));
+    appendFileSync(DEBUG_FILE, "---\n" + stringify(msg));
   else if (DEBUG_FORMAT === "json")
     appendFileSync(DEBUG_FILE, JSON.stringify(msg) + "\n");
   else throw new Error(`Unrecognized DEBUG_FORMAT option`);
