@@ -28,10 +28,14 @@ import {
 import {
   httpConnectionRequest,
   udpConnectionRequest,
+  xmppConnectionRequest,
 } from "./connection-request";
 import { Expression, Task } from "./types";
 import { flattenDevice } from "./mongodb-functions";
 import { evaluate } from "./common/expression";
+import * as config from "../lib/config";
+
+const XMPP_CONFIGURED = !!config.get("XMPP_JID");
 
 export async function connectionRequest(
   deviceId: string,
@@ -43,7 +47,7 @@ export async function connectionRequest(
     device = flattenDevice(res);
   }
 
-  let connectionRequestUrl, udpConnectionRequestAddress, username, password;
+  let connectionRequestUrl, udpConnectionRequestAddress, username, password, stunEnable, connReqJabberId;
 
   if (device["InternetGatewayDevice.ManagementServer.ConnectionRequestURL"]) {
     connectionRequestUrl = (device[
@@ -53,6 +57,12 @@ export async function connectionRequest(
       device[
         "InternetGatewayDevice.ManagementServer.UDPConnectionRequestAddress"
       ] || {}
+    ).value || [""])[0];
+    stunEnable = ((
+      device["InternetGatewayDevice.ManagementServer.STUNEnable"] || {}
+    ).value || [""])[0];
+    connReqJabberId = ((
+      device["InternetGatewayDevice.ManagementServer.ConnReqJabberID"] || {}
     ).value || [""])[0];
     username = ((
       device[
@@ -71,6 +81,10 @@ export async function connectionRequest(
     udpConnectionRequestAddress = ((
       device["Device.ManagementServer.UDPConnectionRequestAddress"] || {}
     ).value || [""])[0];
+    stunEnable = ((device["Device.ManagementServer.STUNEnable"] || {})
+      .value || [""])[0];
+    connReqJabberId = ((device["Device.ManagementServer.ConnReqJabberID"] || {})
+      .value || [""])[0];
     username = ((
       device["Device.ManagementServer.ConnectionRequestUsername"] || {}
     ).value || [""])[0];
@@ -145,7 +159,7 @@ export async function connectionRequest(
   const debug = !!getConfig(snapshot, "cwmp.debug", {}, now, evalCallback);
 
   let udpProm = Promise.resolve(false);
-  if (udpConnectionRequestAddress) {
+  if (udpConnectionRequestAddress && +stunEnable) {
     try {
       const u = new URL("udp://" + udpConnectionRequestAddress);
       udpProm = udpConnectionRequest(
@@ -164,14 +178,25 @@ export async function connectionRequest(
     }
   }
 
-  const status = await httpConnectionRequest(
-    connectionRequestUrl,
-    authExp,
-    CONNECTION_REQUEST_ALLOW_BASIC_AUTH,
-    CONNECTION_REQUEST_TIMEOUT,
-    debug,
-    deviceId
-  );
+  let status;
+  
+  if (connReqJabberId && XMPP_CONFIGURED) {
+    status = await xmppConnectionRequest(
+      connReqJabberId,
+      authExp,
+      CONNECTION_REQUEST_TIMEOUT,
+      debug,
+      deviceId
+    );
+  } else {
+    status = await httpConnectionRequest(
+      connectionRequestUrl,
+      authExp,
+      CONNECTION_REQUEST_ALLOW_BASIC_AUTH,
+      CONNECTION_REQUEST_TIMEOUT,
+      debug,
+      deviceId
+    );
 
   if (await udpProm) return "";
 
