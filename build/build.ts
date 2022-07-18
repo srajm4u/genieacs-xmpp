@@ -50,6 +50,8 @@ const builtins = [
   "tls",
   "http",
   "https",
+  "net",
+  "events",
   "zlib",
   "crypto",
   "util",
